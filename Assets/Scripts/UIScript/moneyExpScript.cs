@@ -99,4 +99,6 @@ public class moneyExpScript : MonoBehaviour
             expText.text = "EXP: " + currentExp.ToString();
         }
     }
+
+
 }

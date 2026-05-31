@@ -35,6 +35,13 @@ public class characterAttackScript : MonoBehaviour
         
         // Immediately update the canvas to show the starting HP
         UpdateHPDisplay(); 
+
+        moneyExpScript = Object.FindAnyObjectByType<moneyExpScript>();
+        
+        if (moneyExpScript == null)
+        {
+            Debug.LogWarning("Enemy spawned, but couldn't find a moneyExpScript in the scene!");
+        }
     }
 
     // --- YOUR CANVAS FUNCTION ---
@@ -68,11 +75,21 @@ public class characterAttackScript : MonoBehaviour
         {
             if (givesExpWhenDead)
             {
-                moneyExpScript.AddExp(expReward); // Give the player EXP for defeating this character
+                // SAFETY CHECK: Only give EXP if the script is actually attached!
+                if (moneyExpScript != null)
+                {
+                    moneyExpScript.AddExp(expReward);
+                }
+                else
+                {
+                    // This prints a helpful yellow warning in the console instead of crashing
+                    Debug.LogWarning("Cannot give EXP! The moneyExpScript is missing on " + gameObject.name);
+                }
             }
-            Destroy(gameObject); // This will remove the character from the game when HP hits 0
+            
+            // Now the code will ALWAYS reach this point and remove the character
+            Destroy(gameObject); 
             Debug.Log(gameObject.name + " has 0 HP!");
-            // You can put death logic here later, like: Destroy(gameObject);
         }
     }
 
