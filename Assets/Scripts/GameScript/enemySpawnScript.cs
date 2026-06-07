@@ -27,15 +27,24 @@ public class enemySpawnScript : MonoBehaviour
 
     void Update()
     {
-        // Time.deltaTime adds the exact time that has passed since the last frame
         timer += Time.deltaTime;
 
-        // Check if the timer has reached or exceeded your set interval
         if (timer >= spawnInterval)
         {
-            SpawnEnemy();
+            // NEW CONDITIONAL: Find how many active clones are currently in the level
+            // Note: Ensure your Enemy Prefab is given a unique Tag like "Enemy" in the Inspector,
+            // or use "Untagged" if that is what they currently use.
+            int currentEnemyCount = GameObject.FindGameObjectsWithTag("Enemy").Length;
+
+            if (currentEnemyCount < 12)
+            {
+                SpawnEnemy();
+            }
+            else
+            {
+                Debug.Log("Enemy deployment skipped: Max limit of 12 units reached on battlefield.");
+            }
             
-            // Reset the timer back to 0 for the next spawn cycle
             timer = 0f; 
         }
     }
