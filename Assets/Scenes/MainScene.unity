@@ -1064,7 +1064,7 @@ MonoBehaviour:
   enemyPrefab: {fileID: 3317434529001171822, guid: 57b0e3219809fab46b8f9e1429bd9267, type: 3}
   spawnPoint: {fileID: 1828440066}
   parentGroup: {fileID: 1550483520}
-  spawnInterval: 3
+  spawnInterval: 5
 --- !u!1 &842111392
 GameObject:
   m_ObjectHideFlags: 0
