@@ -84,7 +84,26 @@ public class moneyExpScript : MonoBehaviour
         currentExp += defaultExpReward;
         UpdateUI();
     }
+	
 
+	public int GetCurrentMoney()
+	{
+		return currentMoney;
+	}
+
+	public void DeductMoney(int amountToSubtract)
+	{
+		currentMoney -= amountToSubtract;
+		
+		// Prevent money from accidentally dropping below 0
+		if (currentMoney < 0) 
+		{
+			currentMoney = 0;
+		}
+		
+		UpdateUI(); // Refresh the screen text instantly!
+	}
+	
     // --- UI UPDATING FUNCTION ---
     
     private void UpdateUI()

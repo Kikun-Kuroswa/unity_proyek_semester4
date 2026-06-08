@@ -467,7 +467,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84db5f06626d8f54a93c58a70292b8ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::movementScript
-  speed: 5
+  speed: 4
   moveLeft: 0
   moveRight: 1
   ignoreTeammates: 0

@@ -6,6 +6,7 @@ TagManager:
   tags:
   - soldier
   - enemy
+  - Enemy
   layers:
   - Default
   - TransparentFX
