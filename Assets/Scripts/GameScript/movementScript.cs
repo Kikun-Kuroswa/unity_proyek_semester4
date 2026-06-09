@@ -8,7 +8,8 @@ public class movementScript : MonoBehaviour
     public bool moveLeft = false;
     public bool moveRight = false;
     public bool ignoreTeammates = false; // Check this box in the inspector if you want this character to ignore teammates (e.g., soldiers ignore other soldiers)
-
+	private bool rangedHalt = false;
+	
     // [Header("Team Settings")]
     // Here is your checkbox! 
     // Unchecked (false) = Soldier, Checked (true) = Enemy.
@@ -30,6 +31,12 @@ public class movementScript : MonoBehaviour
 
     void Update()
     {
+		if (rangedHalt)
+		{
+			// Stop velocity if you are using Rigidbody2D mechanics
+			// rb.velocity = Vector2.zero; 
+			return; // Skip walking code entirely while shooting
+		}
         if (Keyboard.current == null) return;
 
         if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.leftArrowKey.wasPressedThisFrame)
@@ -96,4 +103,9 @@ public class movementScript : MonoBehaviour
     {
         IgnoreTeammates();
     }
+	
+	public void SetRangedCombatHalt(bool shouldHalt)
+	{
+		rangedHalt = shouldHalt;
+	}
 }

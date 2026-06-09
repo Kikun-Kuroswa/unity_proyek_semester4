@@ -68,14 +68,12 @@ public class soldierSpawnScript : MonoBehaviour
     {
         economyManager = Object.FindAnyObjectByType<moneyExpScript>();
         
-        // Keep progress bar visible but empty at start
         if (queueProgressBar != null)
         {
             queueProgressBar.gameObject.SetActive(true);
             queueProgressBar.value = 0f;
         }
 
-        // Initialize both UI displays
         UpdateDeployStatusText();
         UpdateUnitLimitText();
         UpdateQueueCounterUI();
@@ -84,8 +82,6 @@ public class soldierSpawnScript : MonoBehaviour
     void Update()
     {
         HandleQueueProcessing();
-        
-        // Always track active battlefield units so the text updates when they die
         UpdateUnitLimitText();
     }
 
@@ -97,12 +93,23 @@ public class soldierSpawnScript : MonoBehaviour
             {
                 isTraining = true;
                 trainingTimer = 0f;
+            }
 
-                // Change status text directly to Preparing
+            // --- THE PRODUCTION HALT MECHANIC ---
+            // If the player is at or over the unit cap, do NOT advance the timer. Just wait.
+            if (GetCurrentPlayerUnitCount() >= maxPlayerUnits)
+            {
                 if (deployStatusText != null)
                 {
-                    deployStatusText.text = "Preparing...";
+                    deployStatusText.text = "Halted (Cap Full)";
                 }
+                return; // Skips adding time and spawning until a unit dies
+            }
+
+            // If we are under the limit, business as usual:
+            if (deployStatusText != null)
+            {
+                deployStatusText.text = "Preparing...";
             }
 
             QueuedUnit currentUnit = trainingQueue.Peek();
@@ -115,14 +122,7 @@ public class soldierSpawnScript : MonoBehaviour
 
             if (trainingTimer >= currentUnit.trainingTime)
             {
-                if (GetCurrentPlayerUnitCount() < maxPlayerUnits)
-                {
-                    Spawn(currentUnit.prefab);
-                }
-                else
-                {
-                    Debug.LogWarning("Player hit the 12-unit maximum field limit! Spawn canceled.");
-                }
+                Spawn(currentUnit.prefab);
 
                 trainingQueue.Dequeue();
                 DecrementWaitingCount(currentUnit.unitTypeIndex);
@@ -131,13 +131,11 @@ public class soldierSpawnScript : MonoBehaviour
                 trainingTimer = 0f;
                 isTraining = false;
                 
-                // Immediately calculate status for the next frame
                 UpdateDeployStatusText();
             }
         }
         else
         {
-            // Reset slider and check if status text needs to return to "Empty"
             if (isTraining || (queueProgressBar != null && queueProgressBar.value > 0f))
             {
                 if (queueProgressBar != null)
@@ -150,16 +148,13 @@ public class soldierSpawnScript : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Updates the deployment text under the bar to show Empty or Preparing.
-    /// </summary>
     private void UpdateDeployStatusText()
     {
         if (deployStatusText == null) return;
 
         if (trainingQueue.Count > 0)
         {
-            deployStatusText.text = "Preparing...";
+            deployStatusText.text = GetCurrentPlayerUnitCount() >= maxPlayerUnits ? "Halted (Cap Full)" : "Preparing...";
         }
         else
         {
@@ -167,15 +162,12 @@ public class soldierSpawnScript : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Updates your brand new standalone field limit tracker object.
-    /// </summary>
     private void UpdateUnitLimitText()
     {
         if (unitLimitText == null) return;
 
         int currentFieldCount = GetCurrentPlayerUnitCount();
-        unitLimitText.text = "Units: " + currentFieldCount + " / " + maxPlayerUnits;
+        unitLimitText.text = "Units: " + (currentFieldCount - 1) + " / " + (maxPlayerUnits - 1);
     }
 
     // --- BUTTON TRIGGER FUNCTIONS ---
@@ -223,8 +215,6 @@ public class soldierSpawnScript : MonoBehaviour
             UpdateQueueCounterUI();
         }
     }
-
-    // --- UTILITY METHODS ---
 
     private bool VerifyAndChargeFunds(int cost, string unitName)
     {

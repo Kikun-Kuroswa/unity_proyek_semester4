@@ -229,7 +229,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84db5f06626d8f54a93c58a70292b8ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::movementScript
-  speed: 5
+  speed: 4
   moveLeft: 0
   moveRight: 1
   ignoreTeammates: 0
@@ -246,11 +246,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::characterAttackScript
   maxHP: 100
-  hpText: {fileID: 7123348318695240794}
+  currentHP: 0
   attackDamage: 10
   attackInterval: 1.5
+  hpText: {fileID: 7123348318695240794}
+  isRangedUnit: 0
+  projectilePrefab: {fileID: 0}
+  firePoint: {fileID: 0}
+  attackRange: 5
+  projectileSpeed: 8
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 0
   expReward: 25
-  givesExpWhenDead: 0
+  givesExpWhenDead: 1
   moneyExpScript: {fileID: 0}
 --- !u!114 &6625086791323121484
 MonoBehaviour:
@@ -419,7 +428,7 @@ GameObject:
   - component: {fileID: 8863126074478410697}
   m_Layer: 0
   m_Name: Soldier_Canvas
-  m_TagString: soldier
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

@@ -1,57 +1,34 @@
 using UnityEngine;
-using UnityEngine.SceneManagement; // Required to change scenes!
+using UnityEngine.SceneManagement;
 
 public class SceneController : MonoBehaviour
 {
-    [Header("Scene Names")]
-    [Tooltip("The exact name of your main gameplay scene.")]
-    public string gameplaySceneName = "MainScene";
-
-    [Tooltip("The exact name of your main menu scene.")]
-    public string mainMenuSceneName = "MainMenu";
-
-    [Tooltip("The exact name of your game over/ending scene.")]
-    public string endingSceneName = "Ending";
+    // Static variables persist across scene changes
+    public static string gameResultSignal = ""; // Can be "Win" or "Lose"
 
     /// <summary>
-    /// Loads the main gameplay level. Link this to your "Play" or "Start" button.
+    /// Call this to change to the Ending scene and pass whether the player won or lost.
     /// </summary>
-    public void LoadGameplay()
+    public void LoadEndingScene(bool playerWon)
     {
-        SceneManager.LoadScene(gameplaySceneName);
+        if (playerWon)
+        {
+            gameResultSignal = "Win";
+            Debug.Log("Signal set: Player Won! Loading Ending Scene...");
+        }
+        else
+        {
+            gameResultSignal = "Lose";
+            Debug.Log("Signal set: Player Lost! Loading Ending Scene...");
+        }
+
+        // Make sure "Ending" matches the exact name of your scene asset in Build Settings!
+        SceneManager.LoadScene("Ending"); 
     }
 
-    /// <summary>
-    /// Loads the main menu. Link this to your "Quit to Menu" or "Try Again" button.
-    /// </summary>
-    public void LoadMainMenu()
+    // Your existing scene navigation functions can remain below...
+    public void ChangeScene(string sceneName)
     {
-        SceneManager.LoadScene(mainMenuSceneName);
-    }
-
-    /// <summary>
-    /// Loads the ending scene. Call this when the player wins, loses, or beats the game.
-    /// </summary>
-    public void LoadEndingScene()
-    {
-        SceneManager.LoadScene(endingSceneName);
-    }
-
-    /// <summary>
-    /// Reloads whichever scene is currently active. Great for a quick "Restart" button.
-    /// </summary>
-    public void RestartCurrentScene()
-    {
-        Scene activeScene = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(activeScene.name);
-    }
-
-    /// <summary>
-    /// Closes the game entirely. Note: This only works in a built game (.exe/.apk), not inside the Unity Editor.
-    /// </summary>
-    public void QuitGame()
-    {
-        Debug.Log("Quit Game requested!");
-        Application.Quit();
+        SceneManager.LoadScene(sceneName);
     }
 }
