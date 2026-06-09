@@ -16,6 +16,9 @@ public class TowerHealth : MonoBehaviour
     [Tooltip("Drag your 'TowerHP_txt' TextMeshPro component here.")]
     public TextMeshProUGUI hpText;
 
+    [Header("Outside Script Connections")]
+    public winLoseScript winLosePanel; // Reference to the win/lose panel script
+
     void Start()
     {
         currentHealth = maxHealth;
@@ -65,20 +68,22 @@ public class TowerHealth : MonoBehaviour
 	{
 		Debug.Log(gameObject.name + " has been destroyed!");
 
-		// Find the SceneController active in the current scene
-		SceneController sceneCtrl = Object.FindAnyObjectByType<SceneController>();
-
-		if (sceneCtrl != null)
-		{
-			// If the destroyed tower is an Enemy, the player wins. Otherwise, the player loses.
-			bool isPlayerVictory = gameObject.CompareTag("Enemy");
-			
-			sceneCtrl.LoadEndingScene(isPlayerVictory);
-		}
-		else
-		{
-			Debug.LogError("SceneController not found in the scene! Cannot change scenes.");
-		}
+        // If the destroyed tower is an Enemy, the player wins. Otherwise, the player loses.
+        bool isPlayerVictory = gameObject.CompareTag("Enemy");
+        string gameResultSignal = "";
+        
+        if (isPlayerVictory)
+        {
+            gameResultSignal = "Win";
+            winLosePanel.WinLose(gameResultSignal, "Congratulations! You have won the game!");
+            Debug.Log("Signal set: Player Won! Loading Ending Scene...");
+        }
+        else
+        {
+            gameResultSignal = "Lose";
+            winLosePanel.WinLose(gameResultSignal, "Sorry, you have lost the game.");
+            Debug.Log("Signal set: Player Lost! Loading Ending Scene...");
+        }
 
 		Destroy(gameObject);
 	}
