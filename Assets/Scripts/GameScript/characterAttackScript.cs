@@ -1,124 +1,201 @@
 using UnityEngine;
-using TMPro; // This line is required to talk to TextMeshPro!
+using TMPro; // REQUIRED to control TextMeshPro text elements!
 
 public class characterAttackScript : MonoBehaviour
 {
-    [Header("Health Settings")]
-    // Set this in the inspector to whatever you want (e.g., 100)
-    public int maxHP = 100; 
-    private int currentHP;
-    
-    // Drag your Canvas TextMeshPro object into this slot in the inspector
+    [Header("Base Combat Stats")]
+    public int maxHP = 100;
+    [SerializeField] private int currentHP;
+    public float attackDamage = 10f;
+    public float attackInterval = 1.5f;
+    protected float nextAttackTime;
+
+    [Header("UI Text Reference")]
+    [Tooltip("Drag your floating Canvas TextMeshPro component here.")]
     public TextMeshProUGUI hpText; 
 
-    [Header("Attack Settings")]
-    public int attackDamage = 10;
-    
-    // The delay between attacks in seconds
-    public float attackInterval = 1.5f;
+    [Header("Ranged Specialist Settings")]
+    public bool isRangedUnit = false;
+    [Tooltip("The visual bullet prefab that will fly towards targets.")]
+    public GameObject projectilePrefab;
+    [Tooltip("The point relative to the character where the bullet spawns (e.g. hands or weapon tip).")]
+    public Transform firePoint;
+    public float attackRange = 5f;
+    public float projectileSpeed = 8f;
+
+    [Header("Target Layer Filtering")]
+    [Tooltip("Include the layers that units and towers occupy (e.g., Default, UI, or custom layers).")]
+    public LayerMask targetLayers;
 
     [Header("Exp Settings")]
     public int expReward = 25;
-    public bool givesExpWhenDead = true; // Check this box in the inspector if this character should give EXP when defeated
-
+    public bool givesExpWhenDead = true; 
 
     [Header("Outside Script Connections")]
-    public moneyExpScript moneyExpScript; // Reference to the money/exp script
-    
-    // An internal timer to track when we are allowed to attack again
-    private float nextAttackTime = 0f;
+    public moneyExpScript moneyExpScript; 
+
+    private string opponentTag;
+    private movementScript movementComp;
+    private bool hasTargetInRange = false;
 
     void Start()
     {
-        // When the game starts, set current HP to your max HP
+        // Set current HP to max HP when spawning
         currentHP = maxHP;
         
-        // Immediately update the canvas to show the starting HP
-        UpdateHPDisplay(); 
+        // Force text component to change from template strings to actual numbers!
+        UpdateHPDisplay();
 
+        movementComp = GetComponent<movementScript>();
         moneyExpScript = Object.FindAnyObjectByType<moneyExpScript>();
+
+        // Determine who our enemies are based on our own Tag assignment
+        opponentTag = gameObject.CompareTag("soldier") ? "Enemy" : "soldier";
         
         if (moneyExpScript == null)
         {
-            Debug.LogWarning("Enemy spawned, but couldn't find a moneyExpScript in the scene!");
+            Debug.LogWarning(gameObject.name + " spawned, but couldn't find a moneyExpScript in the scene!");
         }
     }
 
-    // --- YOUR CANVAS FUNCTION ---
-    // This updates the TextMeshPro on your character to display the current HP
-    public void UpdateHPDisplay()
+    void Update()
     {
-        // Safety check to ensure you actually linked a text object in the inspector
-        if (hpText != null)
+        if (isRangedUnit)
         {
-            // Changes the text box to strictly display the number
-            hpText.text = currentHP.ToString(); 
+            HandleRangedCombat();
         }
     }
 
-    // --- TAKING DAMAGE FUNCTION ---
-    // Other scripts (or enemies with this exact script) will call this to hurt this character
-    public void TakeDamage(int damageAmount)
+    private void HandleRangedCombat()
     {
-        currentHP -= damageAmount;
+        // Scan the surrounding space in a radius matching the attack range
+        Collider2D[] hitTargets = Physics2D.OverlapCircleAll(transform.position, attackRange, targetLayers);
+        Transform closestTarget = null;
+        float closestDistance = Mathf.Infinity;
 
-        // Prevent HP from dropping into negative numbers
-        if (currentHP < 0) 
+        foreach (Collider2D col in hitTargets)
         {
-            currentHP = 0;
-        }
-
-        // Instantly update the Canvas whenever health is lost
-        UpdateHPDisplay();
-
-        if (currentHP == 0)
-        {
-            if (givesExpWhenDead)
+            // Verify if the scanned object belongs to the enemy side
+            if (col.CompareTag(opponentTag))
             {
-                // SAFETY CHECK: Only give EXP if the script is actually attached!
-                if (moneyExpScript != null)
+                float distance = Vector2.Distance(transform.position, col.transform.position);
+                if (distance < closestDistance)
                 {
-                    moneyExpScript.AddExp(expReward);
-                }
-                else
-                {
-                    // This prints a helpful yellow warning in the console instead of crashing
-                    Debug.LogWarning("Cannot give EXP! The moneyExpScript is missing on " + gameObject.name);
+                    closestDistance = distance;
+                    closestTarget = col.transform;
                 }
             }
-            
-            // Now the code will ALWAYS reach this point and remove the character
-            Destroy(gameObject); 
-            Debug.Log(gameObject.name + " has 0 HP!");
+        }
+
+        if (closestTarget != null)
+        {
+            hasTargetInRange = true;
+
+            // Signal the movement script to halt walking behavior
+            if (movementComp != null) movementComp.SetRangedCombatHalt(true);
+
+            // Execute attack loop when ready
+            if (Time.time >= nextAttackTime)
+            {
+                FireProjectile(closestTarget);
+                nextAttackTime = Time.time + attackInterval;
+            }
+        }
+        else
+        {
+            hasTargetInRange = false;
+            if (movementComp != null) movementComp.SetRangedCombatHalt(false);
         }
     }
 
-    // --- ATTACKING FUNCTION ---
-    // This uses your Trigger Collider. Whenever an enemy stays inside your attack hitbox, 
-    // it will try to attack them on a repeating timer.
+    private void FireProjectile(Transform target)
+    {
+        if (projectilePrefab == null)
+        {
+            Debug.LogWarning(gameObject.name + " is missing a Projectile Prefab reference!");
+            return;
+        }
+
+        // Determine origin point
+        Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
+        
+        // Calculate direction towards the enemy target layout
+        Vector2 shootDirection = (target.position - spawnPos).normalized;
+
+        GameObject bulletGO = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+        Projectile projScript = bulletGO.GetComponent<Projectile>();
+
+        if (projScript != null)
+        {
+            projScript.Setup(shootDirection, projectileSpeed, attackDamage, opponentTag);
+        }
+    }
+
+    // --- MELEE COMBAT MECHANICS ---
     private void OnTriggerStay2D(Collider2D collision)
     {
-        // Check if enough time has passed based on your interval
+        if (isRangedUnit) return; // Ranged units ignore melee triggers
+
         if (Time.time >= nextAttackTime)
         {
-            // Look at the object in our hitbox. Does it have this script so it can take damage?
-            characterAttackScript target = collision.GetComponent<characterAttackScript>();
-
-            // If it DOES have the script (meaning it has health and can take damage)
-            if (target != null)
+            if (collision.CompareTag(opponentTag))
             {
-                // --- NEW CODE: THE FRIENDLY FIRE CHECK ---
-                // We compare the sticky note Tag of the target with our own sticky note Tag.
-                // The "!" symbol means "NOT". So we only attack if the tags do NOT match!
-                if (!target.gameObject.CompareTag(this.gameObject.tag))
+                characterAttackScript unitTarget = collision.GetComponent<characterAttackScript>();
+                if (unitTarget != null)
                 {
-                    // Deal damage using the function we made above
-                    target.TakeDamage(attackDamage);
+                    unitTarget.TakeDamage(Mathf.RoundToInt(attackDamage));
+                    nextAttackTime = Time.time + attackInterval;
+                    return;
+                }
 
-                    // Reset our attack timer so we have to wait for the interval again
+                TowerHealth towerTarget = collision.GetComponent<TowerHealth>();
+                if (towerTarget != null)
+                {
+                    towerTarget.TakeDamage(attackDamage);
                     nextAttackTime = Time.time + attackInterval;
                 }
             }
         }
+    }
+
+    public void TakeDamage(int amount)
+    {
+        currentHP -= amount;
+        currentHP = Mathf.Clamp(currentHP, 0, maxHP);
+
+        // Refresh text numbers immediately upon taking a hit
+        UpdateHPDisplay();
+
+        if (currentHP <= 0)
+        {
+            // Give EXP award if configured
+            if (givesExpWhenDead && moneyExpScript != null)
+            {
+                moneyExpScript.AddExp(expReward);
+            }
+
+            if (movementComp != null) movementComp.SetRangedCombatHalt(false);
+            Destroy(gameObject);
+        }
+    }
+
+    public void UpdateHPDisplay()
+    {
+        if (hpText != null)
+        {
+            hpText.text = currentHP.ToString(); 
+        }
+    }
+
+    public int GetCurrentHP()
+    {
+        return currentHP;
+    }
+
+    // Draws the attack circle inside Unity Editor scene view window for easy configuration layout checking
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }
