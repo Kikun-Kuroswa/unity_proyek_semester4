@@ -119,5 +119,30 @@ public class moneyExpScript : MonoBehaviour
         }
     }
 
+	// --- NEW: EXP GETTER AND DEDUCTION FUNCTIONS FOR UPGRADES ---
+
+    /// <summary>
+    /// Public getter so the UpgradeManager can check how much EXP the player has accumulated.
+    /// </summary>
+    public int GetCurrentExp()
+    {
+        return currentExp;
+    }
+
+    /// <summary>
+    /// Spends/deducts a specified amount of EXP from the player profile and refreshes the canvas UI text.
+    /// </summary>
+    public void DeductExp(int amountToSubtract)
+    {
+        currentExp -= amountToSubtract;
+        
+        // Prevent EXP from accidentally dropping below zero
+        if (currentExp < 0) 
+        {
+            currentExp = 0;
+        }
+        
+        UpdateUI(); // Refresh the screen text canvas instantly!
+    }
 
 }

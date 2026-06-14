@@ -10,6 +10,7 @@ public class soldierSpawnScript : MonoBehaviour
         public GameObject prefab;
         public float trainingTime;
         public int unitTypeIndex; // 1 = Soldier, 2 = Assassin, 3 = Ranged, 4 = Armored
+        public string unitName;   // Added to track names for the deployment status panel text
     }
 
     [Header("Soldier Prefabs")]
@@ -40,197 +41,176 @@ public class soldierSpawnScript : MonoBehaviour
     public TextMeshProUGUI rangedQueueText;
     public TextMeshProUGUI armoredQueueText;
 
-    [Header("Progress Bar UI Elements")]
-    [Tooltip("Drag your Canvas 'QueueBar' Slider here.")]
-    public Slider queueProgressBar;
+    [Header("Army Capacity Settings")]
+    public int totalMaxUnits = 12;
+    public TextMeshProUGUI unitLimitText; // RESTORED: Displays "0 / 12" capacity limits
 
-    [Tooltip("Drag your 'Deploy_txt' TextMeshPro component here (Shows Empty / Preparing).")]
-    public TextMeshProUGUI deployStatusText;
+    [Header("Deployment Visual UI Elements")]
+    public Slider queueSlider;             // RESTORED: Progression fill slider bar
+    public TextMeshProUGUI statusText;    // RESTORED: Displays active string state (e.g., "Training Soldier...")
 
-    [Tooltip("Drag your standalone unit cap text object here (Shows Units: X / 12).")]
-    public TextMeshProUGUI unitLimitText;
+    [Header("UI Spawn Buttons")]
+    public Button soldier1Button;
+    public Button soldier2Button;
+    public Button rangedButton;
+    public Button armoredButton;
 
-    [Header("Global Unit Caps")]
-    public int maxPlayerUnits = 12;
-
-    private Queue<QueuedUnit> trainingQueue = new Queue<QueuedUnit>();
+    private List<QueuedUnit> trainingQueue = new List<QueuedUnit>();
     private float trainingTimer = 0f;
-    private bool isTraining = false;
 
     private int soldier1WaitingCount = 0;
     private int soldier2WaitingCount = 0;
     private int rangedWaitingCount = 0;
     private int armoredWaitingCount = 0;
 
-    private moneyExpScript economyManager;
+    private moneyExpScript walletScript;
 
     void Start()
     {
-        economyManager = Object.FindAnyObjectByType<moneyExpScript>();
-        
-        if (queueProgressBar != null)
+        walletScript = Object.FindAnyObjectByType<moneyExpScript>();
+
+        if (walletScript == null)
         {
-            queueProgressBar.gameObject.SetActive(true);
-            queueProgressBar.value = 0f;
+            Debug.LogError("soldierSpawnScript could not find a moneyExpScript in the scene!");
         }
 
-        UpdateDeployStatusText();
-        UpdateUnitLimitText();
         UpdateQueueCounterUI();
+        UpdateUnitLimitUI();
+        ResetDeploymentStatusUI();
     }
 
     void Update()
     {
-        HandleQueueProcessing();
-        UpdateUnitLimitText();
-    }
+        ManageButtonInteractability();
+        UpdateUnitLimitUI(); // Keep current active army limits accurate in real-time
 
-    private void HandleQueueProcessing()
-    {
+        // --- PROCESSING THE RECRUITMENT TRAINING QUEUE ---
         if (trainingQueue.Count > 0)
         {
-            if (!isTraining)
-            {
-                isTraining = true;
-                trainingTimer = 0f;
-            }
-
-            // --- THE PRODUCTION HALT MECHANIC ---
-            // If the player is at or over the unit cap, do NOT advance the timer. Just wait.
-            if (GetCurrentPlayerUnitCount() >= maxPlayerUnits)
-            {
-                if (deployStatusText != null)
-                {
-                    deployStatusText.text = "Halted (Cap Full)";
-                }
-                return; // Skips adding time and spawning until a unit dies
-            }
-
-            // If we are under the limit, business as usual:
-            if (deployStatusText != null)
-            {
-                deployStatusText.text = "Preparing...";
-            }
-
-            QueuedUnit currentUnit = trainingQueue.Peek();
             trainingTimer += Time.deltaTime;
 
-            if (queueProgressBar != null)
+            // 1. Get the base training parameters
+            float baseTrainingTime = trainingQueue[0].trainingTime;
+            float dynamicReduction = 0f;
+
+            // 2. Process upgrade multipliers if applicable
+            if (UpgradeManager.Instance != null)
             {
-                queueProgressBar.value = trainingTimer / currentUnit.trainingTime;
+                dynamicReduction = UpgradeManager.Instance.deploymentUpgradeLevel * UpgradeManager.Instance.deploymentTimeReductionPerLevel;
             }
 
-            if (trainingTimer >= currentUnit.trainingTime)
-            {
-                Spawn(currentUnit.prefab);
+            // 3. Compute final targeted timeline requirements
+            float finalTargetTrainingTime = Mathf.Max(0.2f, baseTrainingTime - dynamicReduction);
 
-                trainingQueue.Dequeue();
-                DecrementWaitingCount(currentUnit.unitTypeIndex);
+            // 4. RESTORED: Update deployment status text and fill bar ratio
+            if (statusText != null)
+            {
+                statusText.text = "Preparing Unit...";
+            }
+
+            if (queueSlider != null)
+            {
+                queueSlider.value = trainingTimer / finalTargetTrainingTime;
+            }
+
+            // 5. Trigger deployment spawn upon timer completion
+            if (trainingTimer >= finalTargetTrainingTime)
+            {
+                Spawn(trainingQueue[0].prefab);
+                DecrementWaitingCount(trainingQueue[0].unitTypeIndex);
+                trainingQueue.RemoveAt(0);
+                trainingTimer = 0f;
+                
                 UpdateQueueCounterUI();
 
-                trainingTimer = 0f;
-                isTraining = false;
-                
-                UpdateDeployStatusText();
-            }
-        }
-        else
-        {
-            if (isTraining || (queueProgressBar != null && queueProgressBar.value > 0f))
-            {
-                if (queueProgressBar != null)
+                // Reset bar parameters if queue is emptied completely
+                if (trainingQueue.Count == 0)
                 {
-                    queueProgressBar.value = 0f;
+                    ResetDeploymentStatusUI();
                 }
-                UpdateDeployStatusText();
             }
-            isTraining = false;
-        }
-    }
-
-    private void UpdateDeployStatusText()
-    {
-        if (deployStatusText == null) return;
-
-        if (trainingQueue.Count > 0)
-        {
-            deployStatusText.text = GetCurrentPlayerUnitCount() >= maxPlayerUnits ? "Halted (Cap Full)" : "Preparing...";
         }
         else
         {
-            deployStatusText.text = "Empty";
+            // Fallback clear state if nothing resides in our line array balances
+            ResetDeploymentStatusUI();
         }
     }
 
-    private void UpdateUnitLimitText()
+    private void ManageButtonInteractability()
     {
-        if (unitLimitText == null) return;
+        int totalActiveUnitsOnField = GetActiveUnitCount();
+        int unitsCurrentlyInTraining = trainingQueue.Count;
+        bool isArmyCapacityFull = (totalActiveUnitsOnField + unitsCurrentlyInTraining) >= totalMaxUnits;
 
-        int currentFieldCount = GetCurrentPlayerUnitCount();
-        unitLimitText.text = "Units: " + (currentFieldCount - 1) + " / " + (maxPlayerUnits - 1);
+        if (isArmyCapacityFull)
+        {
+            SetAllButtonsState(false);
+            return;
+        }
+
+        int currentGold = walletScript != null ? walletScript.GetCurrentMoney() : 0;
+
+        if (soldier1Button != null) soldier1Button.interactable = currentGold >= soldier1Cost;
+        if (soldier2Button != null) soldier2Button.interactable = currentGold >= soldier2Cost;
+        if (rangedButton != null) rangedButton.interactable = currentGold >= rangedCost;
+        if (armoredButton != null) armoredButton.interactable = currentGold >= armoredCost;
     }
 
-    // --- BUTTON TRIGGER FUNCTIONS ---
-
-    public void SpawnSoldierType1()
+    private void SetAllButtonsState(bool targetState)
     {
-        if (VerifyAndChargeFunds(soldier1Cost, "Soldier"))
+        if (soldier1Button != null) soldier1Button.interactable = targetState;
+        if (soldier2Button != null) soldier2Button.interactable = targetState;
+        if (rangedButton != null) rangedButton.interactable = targetState;
+        if (armoredButton != null) armoredButton.interactable = targetState;
+    }
+
+    public void OnClickQueueSoldier1() { TryQueueUnit(soldierType1Prefab, soldier1Time, soldier1Cost, 1, "Soldier"); }
+    public void OnClickQueueSoldier2() { TryQueueUnit(soldierType2Prefab, soldier2Time, soldier2Cost, 2, "Assassin"); }
+    public void OnClickQueueRanged()   { TryQueueUnit(rangedSoldierPrefab, rangedTime, rangedCost, 3, "Ranged"); }
+    public void OnClickQueueArmored()  { TryQueueUnit(armoredSoldierPrefab, armoredTime, armoredCost, 4, "Armored"); }
+
+    private void TryQueueUnit(GameObject prefab, float trainingTime, int unitCost, int typeIndex, string unitName)
+    {
+        if (walletScript == null || prefab == null) return;
+
+        int totalUnitsPending = GetActiveUnitCount() + trainingQueue.Count;
+        if (totalUnitsPending >= totalMaxUnits)
         {
-            QueuedUnit unit = new QueuedUnit { prefab = soldierType1Prefab, trainingTime = soldier1Time, unitTypeIndex = 1 };
-            trainingQueue.Enqueue(unit);
-            soldier1WaitingCount++;
+            Debug.LogWarning("Cannot queue unit: Maximum combat cap reached!");
+            return;
+        }
+
+        if (walletScript.GetCurrentMoney() >= unitCost)
+        {
+            walletScript.DeductMoney(unitCost);
+
+            QueuedUnit newRequest;
+            newRequest.prefab = prefab;
+            newRequest.trainingTime = trainingTime;
+            newRequest.unitTypeIndex = typeIndex;
+            newRequest.unitName = unitName;
+
+            trainingQueue.Add(newRequest);
+
+            IncrementWaitingCount(typeIndex);
             UpdateQueueCounterUI();
         }
-    }
-
-    public void SpawnSoldierType2()
-    {
-        if (VerifyAndChargeFunds(soldier2Cost, "Assassin"))
+        else
         {
-            QueuedUnit unit = new QueuedUnit { prefab = soldierType2Prefab, trainingTime = soldier2Time, unitTypeIndex = 2 };
-            trainingQueue.Enqueue(unit);
-            soldier2WaitingCount++;
-            UpdateQueueCounterUI();
+            Debug.LogWarning("Insufficient gold balance to hire this unit type.");
         }
     }
 
-    public void SpawnRangedUnit()
+    private void IncrementWaitingCount(int unitTypeIndex)
     {
-        if (VerifyAndChargeFunds(rangedCost, "Ranged Unit"))
-        {
-            QueuedUnit unit = new QueuedUnit { prefab = rangedSoldierPrefab, trainingTime = rangedTime, unitTypeIndex = 3 };
-            trainingQueue.Enqueue(unit);
-            rangedWaitingCount++;
-            UpdateQueueCounterUI();
-        }
+        if (unitTypeIndex == 1) soldier1WaitingCount++;
+        else if (unitTypeIndex == 2) soldier2WaitingCount++;
+        else if (unitTypeIndex == 3) rangedWaitingCount++;
+        else if (unitTypeIndex == 4) armoredWaitingCount++;
     }
 
-    public void SpawnArmoredUnit()
-    {
-        if (VerifyAndChargeFunds(armoredCost, "Armored Unit"))
-        {
-            QueuedUnit unit = new QueuedUnit { prefab = armoredSoldierPrefab, trainingTime = armoredTime, unitTypeIndex = 4 };
-            trainingQueue.Enqueue(unit);
-            armoredWaitingCount++;
-            UpdateQueueCounterUI();
-        }
-    }
-
-    private bool VerifyAndChargeFunds(int cost, string unitName)
-    {
-        if (economyManager == null) return true;
-
-        if (economyManager.GetCurrentMoney() >= cost)
-        {
-            economyManager.DeductMoney(cost);
-            return true;
-        }
-        
-        Debug.Log("Not enough money to buy " + unitName + "!");
-        return false;
-    }
-
-    private int GetCurrentPlayerUnitCount()
+    private int GetActiveUnitCount()
     {
         return GameObject.FindGameObjectsWithTag("soldier").Length;
     }
@@ -249,6 +229,28 @@ public class soldierSpawnScript : MonoBehaviour
         SetTextAndVisibility(soldier2QueueText, soldier2WaitingCount);
         SetTextAndVisibility(rangedQueueText, rangedWaitingCount);
         SetTextAndVisibility(armoredQueueText, armoredWaitingCount);
+    }
+
+    // RESTORED: Keeps your structural total text numbers (like 0/12) operating dynamically 
+    private void UpdateUnitLimitUI()
+    {
+        if (unitLimitText != null)
+        {
+            unitLimitText.text = "Unit Limit: " + GetActiveUnitCount() + " / " + totalMaxUnits;
+        }
+    }
+
+    // RESTORED: Clears status trackers back to empty layouts cleanly
+    private void ResetDeploymentStatusUI()
+    {
+        if (statusText != null)
+        {
+            statusText.text = "Empty...";
+        }
+        if (queueSlider != null)
+        {
+            queueSlider.value = 0f;
+        }
     }
 
     private void SetTextAndVisibility(TextMeshProUGUI element, int count)

@@ -40,6 +40,15 @@ public class characterAttackScript : MonoBehaviour
 
     void Start()
     {
+		if (UpgradeManager.Instance != null)
+		{
+			// 1. Calculate and add upgraded HP to default base stats
+			maxHP += UpgradeManager.Instance.hpUpgradeLevel * UpgradeManager.Instance.hpIncrementPerLevel;
+			
+			// 2. Calculate and add upgraded Damage
+			attackDamage += UpgradeManager.Instance.damageUpgradeLevel * UpgradeManager.Instance.damageIncrementPerLevel;
+		}
+		
         // Set current HP to max HP when spawning
         currentHP = maxHP;
         
