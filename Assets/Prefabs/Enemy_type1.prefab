@@ -153,6 +153,7 @@ GameObject:
   - component: {fileID: 6179453658634705883}
   - component: {fileID: 4713539472403393090}
   - component: {fileID: 6480637007914198751}
+  - component: {fileID: 6691571206172190306}
   m_Layer: 0
   m_Name: Enemy_type1
   m_TagString: Enemy
@@ -169,7 +170,7 @@ Transform:
   m_GameObject: {fileID: 3317434529001171822}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -21.801876, y: -5.2910357, z: 0}
+  m_LocalPosition: {x: -22.46, y: -3.15, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -223,7 +224,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1348310311444785571, guid: 7cb58a0d18c5a9c4eb4d18227777a59e, type: 3}
   m_Color: {r: 1, g: 0.3764706, b: 0, a: 1}
@@ -422,6 +423,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6691571206172190306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3317434529001171822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c56bb3cfa814604478730bc4f9d3a551, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::entityCullingScript
+  cullHeight: -15
 --- !u!1 &7267326310000530309
 GameObject:
   m_ObjectHideFlags: 0
