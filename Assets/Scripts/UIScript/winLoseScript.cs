@@ -8,9 +8,23 @@ public class winLoseScript : MonoBehaviour
     public GameObject panel;
     public TextMeshProUGUI messageText;
 
+    [Header("Audio Settings")]
+    [Tooltip("Drag an AudioSource component here")]
+    public AudioSource audioSource;
+    [Tooltip("SFX clip for winning")]
+    public AudioClip winSFX;
+    [Tooltip("SFX clip for losing")]
+    public AudioClip loseSFX;
+
     void Start()
     {
         panel.SetActive(false);
+
+        // Make sure the audio source ignores the time pause!
+        if (audioSource != null)
+        {
+            audioSource.ignoreListenerPause = true; // Crucial for paused screens
+        }
     }
 
     public void WinLose(string result, string message)
@@ -19,19 +33,35 @@ public class winLoseScript : MonoBehaviour
         {
             Debug.Log("Player has won the game!");
             messageText.text = message;
+            
+            // Play win sound
+            PlayEndGameSFX(winSFX);
+
             finished();
         }
         else if (result == "Lose")
         {
             Debug.Log("Player has lost the game!");
-            messageText.text = message; 
+            messageText.text = message;
+            
+            // Play lose sound
+            PlayEndGameSFX(loseSFX);
+
             finished();
         }
         else
         {
             Debug.LogWarning("Unexpected result signal: " + result);
         }
+    }
 
+    private void PlayEndGameSFX(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+        {
+            // PlayOneShot lets the sound ignore the Time.timeScale = 0f pause
+            audioSource.PlayOneShot(clip);
+        }
     }
 
     public void finished()

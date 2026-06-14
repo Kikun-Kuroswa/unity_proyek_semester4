@@ -19,6 +19,16 @@ public class TowerHealth : MonoBehaviour
     [Header("Outside Script Connections")]
     public winLoseScript winLosePanel; // Reference to the win/lose panel script
 
+    // --- NEW CODE: AUDIO SFX VARIABLES ---
+    [Header("Audio SFX Settings")]
+    [Tooltip("Drag the audio file (.mp3, .wav) that plays when the tower takes damage here.")]
+    public AudioClip damageSFX;
+    
+    [Range(0f, 1f)]
+    [Tooltip("Controls how loud the damage sound effect will play.")]
+    public float sfxVolume = 0.8f;
+    // -------------------------------------
+
     void Start()
     {
         currentHealth = maxHealth;
@@ -32,6 +42,14 @@ public class TowerHealth : MonoBehaviour
     /// </summary>
     public void TakeDamage(float damageAmount)
     {
+        // --- NEW CODE: PLAY DAMAGE SFX ---
+        // Only play if the tower actually takes damage (> 0) and a clip has been assigned
+        if (damageAmount > 0f && damageSFX != null)
+        {
+            AudioSource.PlayClipAtPoint(damageSFX, transform.position, sfxVolume);
+        }
+        // ---------------------------------
+
         currentHealth -= damageAmount;
 
         // Keep health values bound between 0 and your maxHealth variable limit
@@ -65,8 +83,8 @@ public class TowerHealth : MonoBehaviour
     }
 
     private void DestroyTower()
-	{
-		Debug.Log(gameObject.name + " has been destroyed!");
+    {
+        Debug.Log(gameObject.name + " has been destroyed!");
 
         // If the destroyed tower is an Enemy, the player wins. Otherwise, the player loses.
         bool isPlayerVictory = gameObject.CompareTag("Enemy");
@@ -85,8 +103,8 @@ public class TowerHealth : MonoBehaviour
             Debug.Log("Signal set: Player Lost! Loading Ending Scene...");
         }
 
-		Destroy(gameObject);
-	}
+        Destroy(gameObject);
+    }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {

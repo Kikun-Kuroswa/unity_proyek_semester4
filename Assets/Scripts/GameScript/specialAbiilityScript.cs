@@ -7,68 +7,80 @@ public class specialAbilityScript : MonoBehaviour
 
     [Header("Exp Script")]
     public moneyExpScript moneyExpManager; // Reference to the moneyExpScript to access its functions
+    
     [Header("Assassin Spawn Settings")]
     public Transform allyGroup; // The parent object under which all assassin units are organized
     public GameObject allyPrefab; // The prefab for the assassin unit to be spawned
     public Transform allySpawnPoint; // The point where assassin units will be spawned
-    void Start()
-    {
-        // Initialization code here if needed
-    }
 
-    void Update()
-    {
-
-    }
+    [Header("Audio SFX Settings")]
+    [Tooltip("The audio sound file that plays when successfully clearing the screen.")]
+    public AudioClip destroyChildrenSFX;
+    [Tooltip("The audio sound file that plays when successfully summoning the assassin squad.")]
+    public AudioClip spawnAssassinSFX;
+    [Range(0f, 1f)]
+    public float sfxVolume = 1f;
 
     /// <summary>
     /// Destroys all immediate child GameObjects attached to the targeted group object.
     /// </summary>
     public void DestroyAllChildren()
     {
+        // 1. CHOOSE IF PLAYER PASSES THE CHECK
         if(moneyExpManager.GetCurrentExp() < 250)
         {
             Debug.Log("Not enough EXP to use this ability! You need at least 250 EXP.");
-            return; // Exit the function early if the player doesn't have enough EXP
+            return; // Exit early
         }
 
-        moneyExpManager.DeductExp(250); // Deduct 250 EXP from the player's total
+        // 2. PLAY SFX ONLY AFTER PASSING THE CHECK ABOVE
+        if (destroyChildrenSFX != null)
+        {
+            // Using Main Camera position ensures the 3D world sound is perfectly audible to the player
+            Vector3 soundPosition = Camera.main != null ? Camera.main.transform.position : transform.position;
+            AudioSource.PlayClipAtPoint(destroyChildrenSFX, soundPosition, sfxVolume);
+        }
 
-        // If no enemyGroup is assigned in the Inspector, fallback to the object this script is attached to
+        moneyExpManager.DeductExp(250); // Deduct 250 EXP
+
+        // Fix: Use targetParent consistently
         Transform targetParent = enemyGroup != null ? enemyGroup : transform;
 
-        // Loop through all children of the target parent
-        foreach (Transform child in enemyGroup)
+        // FIXED: Loop through 'targetParent' instead of 'enemyGroup' to avoid NullReferenceExceptions
+        foreach (Transform child in targetParent) 
         {
-            // Destroy the GameObject the child Transform is attached to
             Destroy(child.gameObject);
         }
         
-        Debug.Log($"All children of {enemyGroup.name} have been destroyed!");
+        Debug.Log($"All children of {targetParent.name} have been destroyed!");
     }
 
     public void SpawnAlotOfAssasin()
     {
+        // 1. CHOOSE IF PLAYER PASSES THE CHECK
         if(moneyExpManager.GetCurrentExp() < 125)
         {
             Debug.Log("Not enough EXP to use this ability! You need at least 125 EXP.");
-            return; // Exit the function early if the player doesn't have enough EXP
+            return; // Exit early
         }
 
-        moneyExpManager.DeductExp(125); // Deduct 125 EXP from the player's total
+        // 2. PLAY SFX ONLY AFTER PASSING THE CHECK ABOVE
+        if (spawnAssassinSFX != null)
+        {
+            Vector3 soundPosition = Camera.main != null ? Camera.main.transform.position : transform.position;
+            AudioSource.PlayClipAtPoint(spawnAssassinSFX, soundPosition, sfxVolume);
+        }
 
-        // If no allyGroup is assigned in the Inspector, fallback to the object this script is attached to
+        moneyExpManager.DeductExp(125); // Deduct 125 EXP
+
         Transform targetParent = allyGroup != null ? allyGroup : transform;
 
         for (int i = 0; i < 5; i++)
         {
-            // Create a new GameObject for the assassin
             GameObject newAlly = Instantiate(allyPrefab, allySpawnPoint.position, allySpawnPoint.rotation);
-            // Set the assassin's parent to the target parent
             newAlly.transform.SetParent(targetParent);
-            // Optionally, you can set the position, add components, etc. here
         }
         
-        Debug.Log("Spawned 5 assassins under " + targetParent.name);
+        Debug.Log("Spawned 5 assassins successfully!");
     }
 }

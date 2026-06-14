@@ -5,6 +5,12 @@ public class UpgradeManager : MonoBehaviour
     [Header("Connections")]
     public moneyExpScript moneyScript; // Still uses this script since it handles both money and EXP variables
 
+    [Header("Audio Settings")]
+    [Tooltip("Drag your AudioSource component here")]
+    public AudioSource audioSource;
+    [Tooltip("Drag your upgrade success SFX clip here")]
+    public AudioClip upgradeSuccessSFX;
+
     [Header("Upgrade Levels")]
     public int hpUpgradeLevel = 0;
     public int damageUpgradeLevel = 0;
@@ -39,6 +45,12 @@ public class UpgradeManager : MonoBehaviour
         {
             moneyScript = Object.FindAnyObjectByType<moneyExpScript>();
         }
+
+        // Optional fallback: If you forgot to assign the AudioSource, try to grab one on the same GameObject
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+        }
     }
 
     // --- BUTTON TRIGGER FUNCTIONS ---
@@ -46,11 +58,14 @@ public class UpgradeManager : MonoBehaviour
     public void UpgradeUnitHP()
     {
         int currentCost = CalculateCost(hpUpgradeLevel);
-        // FIX: Check current EXP points instead of money balances
+        // CHECK: Does the player have enough EXP?
         if (moneyScript != null && moneyScript.GetCurrentExp() >= currentCost)
         {
             moneyScript.DeductExp(currentCost); // Deduct EXP
             hpUpgradeLevel++;
+            
+            PlayUpgradeSFX(); // <-- PLAY SFX HERE (Only on success)
+
             Debug.Log($"HP Upgraded using EXP! Current Level: {hpUpgradeLevel}. Extra HP: +{hpUpgradeLevel * hpIncrementPerLevel}");
         }
         else
@@ -62,11 +77,14 @@ public class UpgradeManager : MonoBehaviour
     public void UpgradeUnitDamage()
     {
         int currentCost = CalculateCost(damageUpgradeLevel);
-        // FIX: Check current EXP points instead of money balances
+        // CHECK: Does the player have enough EXP?
         if (moneyScript != null && moneyScript.GetCurrentExp() >= currentCost)
         {
             moneyScript.DeductExp(currentCost); // Deduct EXP
             damageUpgradeLevel++;
+
+            PlayUpgradeSFX(); // <-- PLAY SFX HERE (Only on success)
+
             Debug.Log($"Damage Upgraded using EXP! Current Level: {damageUpgradeLevel}. Extra Damage: +{damageUpgradeLevel * damageIncrementPerLevel}");
         }
         else
@@ -78,11 +96,14 @@ public class UpgradeManager : MonoBehaviour
     public void UpgradeDeploymentSpeed()
     {
         int currentCost = CalculateCost(deploymentUpgradeLevel);
-        // FIX: Check current EXP points instead of money balances
+        // CHECK: Does the player have enough EXP?
         if (moneyScript != null && moneyScript.GetCurrentExp() >= currentCost)
         {
             moneyScript.DeductExp(currentCost); // Deduct EXP
             deploymentUpgradeLevel++;
+
+            PlayUpgradeSFX(); // <-- PLAY SFX HERE (Only on success)
+
             Debug.Log($"Deployment Speed Upgraded using EXP! Current Level: {deploymentUpgradeLevel}. Training time reduced by: {deploymentUpgradeLevel * deploymentTimeReductionPerLevel}s");
         }
         else
@@ -94,5 +115,15 @@ public class UpgradeManager : MonoBehaviour
     private int CalculateCost(int currentLevel)
     {
         return baseUpgradeCost + (currentLevel * costIncreasePerLevel);
+    }
+
+    // Helper method to safely play the sound effect without interrupting itself
+    private void PlayUpgradeSFX()
+    {
+        if (audioSource != null && upgradeSuccessSFX != null)
+        {
+            // PlayOneShot allows overlapping sounds if the player clicks upgrades quickly
+            audioSource.PlayOneShot(upgradeSuccessSFX);
+        }
     }
 }

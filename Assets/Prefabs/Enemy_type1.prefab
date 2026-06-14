@@ -392,6 +392,8 @@ MonoBehaviour:
   firePoint: {fileID: 0}
   attackRange: 5
   projectileSpeed: 8
+  attackSFX: {fileID: 8300000, guid: 88fcb727f0dc7d841960fb5b440ef022, type: 3}
+  sfxVolume: 0.6
   targetLayers:
     serializedVersion: 2
     m_Bits: 0
