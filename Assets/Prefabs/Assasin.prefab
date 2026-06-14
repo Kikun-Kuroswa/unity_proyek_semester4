@@ -273,7 +273,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f254e7cfddeacab4cb528246d65a7eac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ignoreAndDieScript
-  lifetime: 5
+  lifetime: 6
   tagsToIgnore:
   - soldier
   - enemy

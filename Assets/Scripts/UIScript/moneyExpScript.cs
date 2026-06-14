@@ -91,6 +91,11 @@ public class moneyExpScript : MonoBehaviour
 		return currentMoney;
 	}
 
+	public int GetCurrentExp()
+	{
+		return currentExp;
+	}
+
 	public void DeductMoney(int amountToSubtract)
 	{
 		currentMoney -= amountToSubtract;
@@ -99,6 +104,19 @@ public class moneyExpScript : MonoBehaviour
 		if (currentMoney < 0) 
 		{
 			currentMoney = 0;
+		}
+		
+		UpdateUI(); // Refresh the screen text instantly!
+	}
+
+    public void DeductExp(int amountToSubtract)
+	{
+		currentExp -= amountToSubtract;
+		
+		// Prevent EXP from accidentally dropping below 0
+		if (currentExp < 0) 
+		{
+			currentExp = 0;
 		}
 		
 		UpdateUI(); // Refresh the screen text instantly!
